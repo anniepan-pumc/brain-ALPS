@@ -1,5 +1,8 @@
 # brain-ALPS with TBSS analysis
-Automatic brain DTI-ALPS with TBSS analysis. Please cite: "Li, W., Liu, Z., Zhai, F., Han, F., Li, M., Zhou, L., Ni, J., Yao, M., Zhang, S., Cui, L., Jin, Z., Zhu, Y., 2024. Automated diffusion‐weighted image analysis along the perivascular space index reveals glymphatic dysfunction in association with brain parenchymal lesions. Human Brain Mapping 45, e26790. https://doi.org/10.1002/hbm.26790"
+Automatic brain DTI-ALPS with TBSS analysis.
+
+# Citation
+Please cite: "Li, W., Liu, Z., Zhai, F., Han, F., Li, M., Zhou, L., Ni, J., Yao, M., Zhang, S., Cui, L., Jin, Z., Zhu, Y., 2024. Automated diffusion‐weighted image analysis along the perivascular space index reveals glymphatic dysfunction in association with brain parenchymal lesions. Human Brain Mapping 45, e26790. https://doi.org/10.1002/hbm.26790"
 
 # Overview
 <img width="1347" height="844" alt="image" src="https://github.com/user-attachments/assets/c0420da5-7e5e-439e-9d2c-d253ed353d45" />
