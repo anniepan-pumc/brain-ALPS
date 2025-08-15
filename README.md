@@ -1,5 +1,5 @@
-# brain-ALPS
-Automatic brain DTI-ALPS analysis
+# brain-ALPS with TBSS analysis
+Automatic brain DTI-ALPS with TBSS analysis
 
 # Overview
 <img width="1347" height="844" alt="image" src="https://github.com/user-attachments/assets/c0420da5-7e5e-439e-9d2c-d253ed353d45" />
