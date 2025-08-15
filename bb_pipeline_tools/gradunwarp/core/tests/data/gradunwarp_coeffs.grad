@@ -1,0 +1,37 @@
+#*[ Script ****************************************************************\
+#
+# Name        : dummy.grad
+#
+# Date        : 0970-01-01
+#
+# Author      : Mario Bros
+#
+# Language    :
+#
+# Description : Defines Legendre coefficients in spherical harmonics for
+#               dummy Gradient Coil
+#
+#****************************************************************************/
+
+#*] END: */
+dummy, dummy , Gx,y,z = 80/80 mT/m
+win_low = 0, win_high = 0, win_algo = 0, win_dummy = 2;
+0.25 m = R0, lnorm = 4? A(1,0) = B(1,1) = A(1,1) = 0;
+0 = CoSyMode,
+
+
+
+NO. TYPE            SPECTRUM                     AXIS
+
+ 1  A( 3, 0)           -0.0100000                   z
+ 2  A( 5, 0)            0.02000000                  z
+ 3  A( 7, 0)           -0.0300000                   z
+ 4  A( 9, 0)            0.0400000                   z
+101 A( 3, 1)            0.0100000                   x
+102 A( 3, 3)           -0.02000000                  x
+103 A( 5, 1)            0.03000000                  x
+104 A( 5, 3)           -0.04000000                  x
+201 B( 3, 1)            0.01000000                  y
+202 B( 3, 3)           -0.02000000                  y
+203 B( 5, 1)            0.03000000                  y
+204 B( 5, 3)           -0.04000000                  y
