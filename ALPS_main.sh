@@ -9,7 +9,8 @@ source $FSLDIR/etc/fslconf/fsl.sh
 # Use the correct subject name and file paths
 subject=$1
 study_time=$2
-if_eddy=1
+if_eddy=$3
+if_bidirect=$4
 radius=2.5
 subj_dir="$SUBJECTS_DIR/$subject/$study_time/DTI"
 code_dir="/path/to/code"
@@ -37,6 +38,16 @@ fi
 echo "Processing DTI file: $dti_file"
 echo "Using bvec file: $bvec_file"
 echo "Using bval file: $bval_file"
+
+# Test PA if birection (AP or PA)
+PA_file=""
+if [ "$if_bidirect" == 1 ]; then
+  PA_file=$(find "$subj_dir" -name "*PA*.nii.gz" | head -1)
+  if [ ! -f "$PA_file" ]; then
+    echo "Error: PA file not found in $subj_dir"
+    exit 1
+  fi
+fi
 # Get the base name without extension for output files
 base_name=$(basename "$dti_file" .nii.gz)
 
@@ -86,9 +97,16 @@ fi
 fi
 #提取b0
 # echo "提取b0"
-fslroi "$dti_file" "${subj_dir}/preprocess/temp_b0_1" 0 -1 0 -1 0 -1 0 1
-fslroi "$dti_file" "${subj_dir}/preprocess/temp_b0_2" 0 -1 0 -1 0 -1 $((n / 2)) 1
-fslmaths "${subj_dir}/preprocess/temp_b0_1" -add "${subj_dir}/preprocess/temp_b0_2" -div 2 "${subj_dir}/preprocess/b0"
+if [ "$if_bidirect" == 1 ]; then
+  fslroi "$dti_file" "${subj_dir}/preprocess/temp_b0_1" 0 -1 0 -1 0 -1 0 1
+  fslroi "$PA_file" "${subj_dir}/preprocess/temp_b0_2" 0 -1 0 -1 0 -1 0 1
+  fslmerge -t ${subj_dir}/preprocess/b0 ${subj_dir}/preprocess/temp_b0_1.nii.gz ${subj_dir}/preprocess/temp_b0_2.nii.gz
+else
+  # single direction
+  fslroi "$dti_file" "${subj_dir}/preprocess/temp_b0_1" 0 -1 0 -1 0 -1 0 1
+  fslroi "$dti_file" "${subj_dir}/preprocess/temp_b0_2" 0 -1 0 -1 0 -1 $((n / 2)) 1
+  fslmaths "${subj_dir}/preprocess/temp_b0_1" -add "${subj_dir}/preprocess/temp_b0_2" -div 2 "${subj_dir}/preprocess/b0"
+fi
 b02b0_1=`find /${FSLDIR} -name "b02b0_1.cnf" | head -n 1`
 topup --imain="${subj_dir}/preprocess/b0" --datain="${subj_dir}/preprocess/acqparams.txt" --config="${b02b0_1}" --out="${subj_dir}/preprocess/topup_results" --iout="${subj_dir}/preprocess/hifi_b0"
 # bet, get brain mask
