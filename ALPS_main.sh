@@ -41,10 +41,12 @@ echo "Using bval file: $bval_file"
 
 # Test PA if birection (AP or PA)
 PA_file=""
+AP_file=""
 if [ "$if_bidirect" == 1 ]; then
   PA_file=$(find "$subj_dir" -name "*PA*.nii.gz" | head -1)
-  if [ ! -f "$PA_file" ]; then
-    echo "Error: PA file not found in $subj_dir"
+  AP_file=$(find "$subj_dir" -name "*AP*.nii.gz" | head -1)
+  if [ ! -f "$PA_file" ] || [ ! -f "$AP_file" ]; then
+    echo "Error: PA/AP file not found in $subj_dir"
     exit 1
   fi
 fi
@@ -66,34 +68,53 @@ for ((i=1;i<=${n};i++));do
 done
 echo $indx > ${subj_dir}/preprocess/eddy_index.txt
 #acqparams.txt
-#获取json文件中的参数 - acqparam
-if [ -f "${json_file}" ]; then
-    # ACQUISITION PARAMETERS OF FIRST INPUT (REQUIRED FOR EDDY)
-    #scanner1=$(jq -r '.Manufacturer' "$json1") # -r gives you the raw output
-    #scanner1=$(cat "${json1}" | grep -w Manufacturer | cut -d ' ' -f2 | tr -d ',')
-    scanner1=$(cat "${json_file}" | awk -F'"' '/"Manufacturer"/ {print $4}')
-    if [[ "$scanner1" == *"Philips"* ]]
-    then
-        #PEdir1=$(jq -r '.PhaseEncodingAxis' "$json1")
-        #PEdir1=$(cat "${json1}" | grep -w PhaseEncodingAxis | cut -d ' ' -f2 | tr -d ',' | tr -d '"')
-        PEdir1=$(cat "${json_file}" | awk -F'"' '/"PhaseEncodingAxis"/ {print $4}')
-        TotalReadoutTime1=0.1 #this assumes that the readout time is identical for all acquisitions on the Philips scanner. A "realistic" read-out time is ~50-100ms (and eddy accepts 10-200ms). So use 0.1 (i.e., 100 ms), not 1.
-    else
-        #PEdir1=$(jq -r '.PhaseEncodingDirection' "$json1")
-        #TotalReadoutTime1=$(jq -r '.TotalReadoutTime' "$json1")
-        #PEdir1=$(cat "${json1}" | grep -w PhaseEncodingDirection | cut -d ' ' -f2 | tr -d ',' | tr -d '"')
-        #TotalReadoutTime1=$(cat "${json1}" | grep -w TotalReadoutTime | cut -d ' ' -f2 | tr -d ',' | tr -d '"')
-        PEdir1=$(cat "${json_file}" | awk -F'"' '/"PhaseEncodingDirection"/ {print $4}')
-        TotalReadoutTime1=$(cat "${json_file}" | grep -w TotalReadoutTime | cut -d ':' -f2 | cut -d ',' -f1 | xargs)
-        
+if [ "$if_AP_PA" == 1 ]; then
+    # Creation of acqparam file for AP and PA
+    numlines=`${FSLDIR}/bin/fslval $AP_file dim2`
+    dtiDwell=`$BB_BIN_DIR/bb_pipeline_tools/bb_get_dwell_time $AP_file`
+    topupValue="0"`echo "scale=4;("$dtiDwell" * ("$numlines" -1.0)) / 1000.0 "| bc`
+
+    cat /dev/null > ${subj_dir}/preprocess/acqparams.txt 
+
+    for i in `seq 1 $numAP`;
+    do
+        printf "0 -1 0 $topupValue\n" >>${subj_dir}/preprocess/acqparams.txt
+    done   
+
+    for i in `seq 1 $numPA`;
+    do
+        printf "0 1 0 $topupValue\n" >>${subj_dir}/preprocess/acqparams.txt
+    done   
+else
+    #获取json文件中的参数 - acqparam
+    if [ -f "${json_file}" ]; then
+        # ACQUISITION PARAMETERS OF FIRST INPUT (REQUIRED FOR EDDY)
+        #scanner1=$(jq -r '.Manufacturer' "$json1") # -r gives you the raw output
+        #scanner1=$(cat "${json1}" | grep -w Manufacturer | cut -d ' ' -f2 | tr -d ',')
+        scanner1=$(cat "${json_file}" | awk -F'"' '/"Manufacturer"/ {print $4}')
+        if [[ "$scanner1" == *"Philips"* ]]
+        then
+            #PEdir1=$(jq -r '.PhaseEncodingAxis' "$json1")
+            #PEdir1=$(cat "${json1}" | grep -w PhaseEncodingAxis | cut -d ' ' -f2 | tr -d ',' | tr -d '"')
+            PEdir1=$(cat "${json_file}" | awk -F'"' '/"PhaseEncodingAxis"/ {print $4}')
+            TotalReadoutTime1=0.1 #this assumes that the readout time is identical for all acquisitions on the Philips scanner. A "realistic" read-out time is ~50-100ms (and eddy accepts 10-200ms). So use 0.1 (i.e., 100 ms), not 1.
+        else
+            #PEdir1=$(jq -r '.PhaseEncodingDirection' "$json1")
+            #TotalReadoutTime1=$(jq -r '.TotalReadoutTime' "$json1")
+            #PEdir1=$(cat "${json1}" | grep -w PhaseEncodingDirection | cut -d ' ' -f2 | tr -d ',' | tr -d '"')
+            #TotalReadoutTime1=$(cat "${json1}" | grep -w TotalReadoutTime | cut -d ' ' -f2 | tr -d ',' | tr -d '"')
+            PEdir1=$(cat "${json_file}" | awk -F'"' '/"PhaseEncodingDirection"/ {print $4}')
+            TotalReadoutTime1=$(cat "${json_file}" | grep -w TotalReadoutTime | cut -d ':' -f2 | cut -d ',' -f1 | xargs)
+            
+        fi
+        if [ "$PEdir1" = i ]; then printf "1 0 0 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt";
+        elif [ "$PEdir1" = i- ]; then printf "-1 0 0 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt";
+        elif [ "$PEdir1" = j ]; then printf "0 1 0 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt";
+        elif [ "$PEdir1" = j- ]; then printf "0 -1 0 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt";
+        elif [ "$PEdir1" = k ]; then printf "0 0 1 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt";
+        elif [ "$PEdir1" = k- ]; then printf "0 0 -1 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt"; 
+        fi
     fi
-    if [ "$PEdir1" = i ]; then printf "1 0 0 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt";
-    elif [ "$PEdir1" = i- ]; then printf "-1 0 0 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt";
-    elif [ "$PEdir1" = j ]; then printf "0 1 0 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt";
-    elif [ "$PEdir1" = j- ]; then printf "0 -1 0 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt";
-    elif [ "$PEdir1" = k ]; then printf "0 0 1 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt";
-    elif [ "$PEdir1" = k- ]; then printf "0 0 -1 $TotalReadoutTime1" > "${subj_dir}/preprocess/acqparams.txt"; 
-fi
 fi
 #提取b0
 # echo "提取b0"
@@ -109,6 +130,11 @@ else
 fi
 b02b0_1=`find /${FSLDIR} -name "b02b0_1.cnf" | head -n 1`
 topup --imain="${subj_dir}/preprocess/b0" --datain="${subj_dir}/preprocess/acqparams.txt" --config="${b02b0_1}" --out="${subj_dir}/preprocess/topup_results" --iout="${subj_dir}/preprocess/hifi_b0"
+if [ "$if_AP_PA" == 1 ]; then
+  applytopup --imain="${subj_dir}/preprocess/temp_b0_1,${subj_dir}/preprocess/temp_b0_2" --topup="${subj_dir}/preprocess/b0" --datain="${subj_dir}/preprocess/acqparams.txt" --inindex=1,2 --out="${subj_dir}/preprocess/b0"
+else
+  applytopup --imain="${subj_dir}/preprocess/temp_b0_1" --topup="${subj_dir}/preprocess/b0" --datain="${subj_dir}/preprocess/acqparams.txt" --inindex=1 --out="${subj_dir}/preprocess/b0"
+fi
 # bet, get brain mask
 bet2 "${subj_dir}/preprocess/b0" "${subj_dir}/preprocess/nodif_brain" -m 
 # 涡流矫正
